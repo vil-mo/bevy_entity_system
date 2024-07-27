@@ -2,12 +2,13 @@ use bevy_ecs::{
     archetype::Archetype,
     component::{ComponentId, Components, Tick},
     entity::Entity,
-    query::{FilteredAccess, QueryData, ReadOnlyQueryData, WorldQuery},
+    query::{FilteredAccess, QueryData, QueryItem, ReadOnlyQueryData, WorldQuery},
     storage::{Table, TableRow},
     world::{unsafe_world_cell::UnsafeWorldCell, World},
 };
+use shrink_fetch::{SFQueryData, SFReadOnlyQueryData};
 
-pub type QueryDataItem<'w, D> = <D as WorldQuery>::Item<'w>;
+pub mod shrink_fetch;
 
 /// Allows disjointed access to query data
 ///
@@ -23,49 +24,61 @@ pub type QueryDataItem<'w, D> = <D as WorldQuery>::Item<'w>;
 /// // Given the following system
 /// fn fancy_system(mut query: Query<DataSet<(&mut Health, &Health)>>) {
 ///     for mut set in query.iter_mut() {
-///         do_thing_mut(set.d0());
+///         do_thing_mut(&mut set.d0());
 ///         do_thing(set.d1());
 ///     }
 /// }
 /// # bevy_ecs::system::assert_is_system(fancy_system);
 /// ```
 pub struct DataSet<'w, T: QueryData> {
-    items: T::Item<'w>,
+    fetch: T::Fetch<'w>,
+    entity: Entity,
+    table_row: TableRow,
 }
 
-impl<'w, D0: QueryData, D1: QueryData> DataSet<'w, (D0, D1)> {
+impl<'w, D0: SFQueryData, D1: SFQueryData> DataSet<'w, (D0, D1)> {
     /// Gets exclusive access to the 1st parameter in this [`DataSet`].
     /// No other parameters may be accessed while this one is active
-    pub fn d0(&mut self) -> &mut QueryDataItem<'w, D0> {
-        &mut self.items.0
+    pub fn d0<'a>(&'a mut self) -> QueryItem<'a, D0> {
+        unsafe {
+            D0::fetch(
+                &mut D0::shrink_fetch(self.fetch.0.clone()),
+                self.entity,
+                self.table_row,
+            )
+        }
     }
 
     /// Gets exclusive access to the 2nd parameter in this [`DataSet`].
     /// No other parameters may be accessed while this one is active
-    pub fn d1(&mut self) -> &mut QueryDataItem<'w, D1> {
-        &mut self.items.1
+    pub fn d1<'a>(&'a mut self) -> QueryItem<'a, D1> {
+        unsafe {
+            D1::fetch(
+                &mut D1::shrink_fetch(self.fetch.1.clone()),
+                self.entity,
+                self.table_row,
+            )
+        }
     }
 }
 
-unsafe impl<'w, D0: QueryData, D1: QueryData> QueryData for DataSet<'w, (D0, D1)> {
+unsafe impl<'w, D0: SFQueryData, D1: SFQueryData> QueryData for DataSet<'w, (D0, D1)> {
     type ReadOnly = DataSet<'w, (D0::ReadOnly, D1::ReadOnly)>;
 }
 
-unsafe impl<'w, D0: ReadOnlyQueryData, D1: ReadOnlyQueryData> ReadOnlyQueryData
+unsafe impl<'w, D0: SFReadOnlyQueryData, D1: SFReadOnlyQueryData> ReadOnlyQueryData
     for DataSet<'w, (D0, D1)>
 {
 }
 
-
-
 /// SAFETY:
 /// For each [`QueryData`] in the set, their respective [`update_component_access`] gets called inside [`update_component_access`] function.
 /// [`DataSet`] is a conjunction, so [`matches_component_set`] is also a conjuction of [`QueryData`] in the set.
-/// 
+///
 ///
 /// [`matches_component_set`]: Self::matches_component_set
 /// [`update_component_access`]: Self::update_component_access
-unsafe impl<'__w, D0: QueryData, D1: QueryData> WorldQuery for DataSet<'__w, (D0, D1)> {
+unsafe impl<'__w, D0: SFQueryData, D1: SFQueryData> WorldQuery for DataSet<'__w, (D0, D1)> {
     type Item<'w> = DataSet<'w, (D0, D1)>;
     type Fetch<'w> = (D0::Fetch<'w>, D1::Fetch<'w>);
     type State = (D0::State, D1::State);
@@ -73,10 +86,19 @@ unsafe impl<'__w, D0: QueryData, D1: QueryData> WorldQuery for DataSet<'__w, (D0
     /// Dense if all sets are dense
     const IS_DENSE: bool = D0::IS_DENSE && D1::IS_DENSE;
 
-    fn shrink<'wlong: 'wshort, 'wshort>(item: Self::Item<'wlong>) -> Self::Item<'wshort> {
-        let DataSet { items: (d0, d1) } = item;
+    fn shrink<'wlong: 'wshort, 'wshort>(
+        item: DataSet<'wlong, (D0, D1)>,
+    ) -> DataSet<'wshort, (D0, D1)> {
+        let DataSet {
+            fetch: (fetch0, fetch1),
+            entity,
+            table_row,
+        } = item;
+
         DataSet {
-            items: (D0::shrink(d0), D1::shrink(d1)),
+            fetch: (D0::shrink_fetch(fetch0), D1::shrink_fetch(fetch1)),
+            entity,
+            table_row,
         }
     }
 
@@ -118,10 +140,9 @@ unsafe impl<'__w, D0: QueryData, D1: QueryData> WorldQuery for DataSet<'__w, (D0
         table_row: TableRow,
     ) -> Self::Item<'w> {
         DataSet {
-            items: (
-                D0::fetch(&mut fetch.0, entity, table_row),
-                D1::fetch(&mut fetch.1, entity, table_row),
-            ),
+            fetch: fetch.clone(),
+            entity,
+            table_row,
         }
     }
 
@@ -132,13 +153,11 @@ unsafe impl<'__w, D0: QueryData, D1: QueryData> WorldQuery for DataSet<'__w, (D0
         // Making sure each individual member of the set doesn't conflict with other query access
         D0::update_component_access(&state.0, &mut access.clone());
 
-
         // Updating access of empty [`FilteredAccess`] so then it can be used for conjunction
         let mut access1 = FilteredAccess::default();
         D1::update_component_access(&state.1, &mut access1);
         // Making sure each individual member of the set doesn't conflict with other query access
         D1::update_component_access(&state.1, &mut access.clone());
-
 
         // Extending access with conjunction of the accesses of all the members of the set
         access.extend(&access0);
@@ -170,8 +189,6 @@ unsafe impl<'__w, D0: QueryData, D1: QueryData> WorldQuery for DataSet<'__w, (D0
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
 
@@ -193,9 +210,9 @@ mod tests {
         // Given the following system
         fn fancy_system(mut query: Query<DataSet<(&mut Health, &Health)>>) {
             for mut set in query.iter_mut() {
-                assert_health(set.d1(),30);
+                assert_health(set.d1(), 30);
 
-                multiply_health(set.d0());
+                multiply_health(&mut set.d0());
 
                 assert_health(set.d1(), 60);
             }
