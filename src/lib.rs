@@ -40,25 +40,13 @@ impl<'w, D0: SFQueryData, D1: SFQueryData> DataSet<'w, (D0, D1)> {
     /// Gets exclusive access to the 1st parameter in this [`DataSet`].
     /// No other parameters may be accessed while this one is active
     pub fn d0<'a>(&'a mut self) -> QueryItem<'a, D0> {
-        unsafe {
-            D0::fetch(
-                &mut D0::shrink_fetch(self.fetch.0.clone()),
-                self.entity,
-                self.table_row,
-            )
-        }
+        unsafe { D0::shrink(D0::fetch(&mut self.fetch.0, self.entity, self.table_row)) }
     }
 
     /// Gets exclusive access to the 2nd parameter in this [`DataSet`].
     /// No other parameters may be accessed while this one is active
     pub fn d1<'a>(&'a mut self) -> QueryItem<'a, D1> {
-        unsafe {
-            D1::fetch(
-                &mut D1::shrink_fetch(self.fetch.1.clone()),
-                self.entity,
-                self.table_row,
-            )
-        }
+        unsafe { D1::shrink(D1::fetch(&mut self.fetch.1, self.entity, self.table_row)) }
     }
 }
 

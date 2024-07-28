@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 bevy_ecs = { version = "0.14" }
+bevy_utils = { version = "0.14" }
