@@ -11,4 +11,4 @@ categories = ["abstactions"]
 [dependencies]
 bevy_utils = { version = "0.14" }
 bevy_ecs = { version = "0.14" }
-bevy_entity_system_macros = { path = "macros" }
+bevy_entity_system_macros = { version = "0.14.1", path = "macros" }

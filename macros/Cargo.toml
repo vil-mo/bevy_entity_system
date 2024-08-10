@@ -1,6 +1,6 @@
 [package]
 name = "bevy_entity_system_macros"
-version = "0.15.0-dev"
+version = "0.14.1"
 description = "Bevy EntitySystem Macros"
 edition = "2021"
 license = "MIT OR Apache-2.0"
