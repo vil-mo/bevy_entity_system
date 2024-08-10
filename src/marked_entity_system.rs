@@ -1,35 +1,37 @@
+use crate::{prelude::IntoEntitySystem, EntitySystem};
+use bevy_ecs::{
+    query::{QueryData, QueryFilter, QueryItem},
+    system::{In, SystemParam, SystemParamItem},
+};
+use bevy_entity_system_macros::IntoSystem;
+use bevy_utils::all_tuples;
 use std::{
     marker::PhantomData,
     ops::{Deref, DerefMut},
 };
 
-use bevy_ecs::{
-    query::{QueryData, QueryFilter, QueryItem},
-    system::{In, SystemParam, SystemParamItem},
-};
-use bevy_utils::all_tuples;
-
-use crate::EntitySystem;
-
-pub struct FunctionEntitySystem<F: EntitySystemFunction<Marker>, Marker: 'static>(
-    F,
+#[derive(IntoSystem)]
+pub struct MarkedEntitySystemRunner<Marker: 'static, T: MarkedEntitySystem<Marker>>(
+    T,
     PhantomData<fn() -> Marker>,
 );
 
-impl<F: EntitySystemFunction<Marker>, Marker: 'static> FunctionEntitySystem<F, Marker> {
+impl<Marker: 'static, T: MarkedEntitySystem<Marker>> MarkedEntitySystemRunner<Marker, T> {
     #[inline]
-    pub fn new(function: F) -> Self {
-        FunctionEntitySystem(function, PhantomData)
+    pub fn new(function: T) -> Self {
+        MarkedEntitySystemRunner(function, PhantomData)
     }
 }
 
-impl<F: EntitySystemFunction<Marker>, Marker> EntitySystem for FunctionEntitySystem<F, Marker> {
-    type Data = F::Data;
-    type Filter = F::Filter;
-    type Param = F::Param;
+impl<Marker: 'static, T: MarkedEntitySystem<Marker>> EntitySystem
+    for MarkedEntitySystemRunner<Marker, T>
+{
+    type Data = T::Data;
+    type Filter = T::Filter;
+    type Param = T::Param;
 
-    type In = F::In;
-    type Out = F::Out;
+    type In = T::In;
+    type Out = T::Out;
 
     fn run(
         &mut self,
@@ -41,7 +43,7 @@ impl<F: EntitySystemFunction<Marker>, Marker> EntitySystem for FunctionEntitySys
     }
 }
 
-pub trait EntitySystemFunction<Marker>: Send + Sync + 'static {
+pub trait MarkedEntitySystem<Marker>: Send + Sync + 'static {
     type Data: QueryData + 'static;
     type Filter: QueryFilter + 'static;
     type Param: SystemParam + 'static;
@@ -102,7 +104,7 @@ macro_rules! impl_entity_system_function {
             Out,
             Func: Send + Sync + 'static,
             $($param: SystemParam + 'static),*
-        > EntitySystemFunction<fn(Data<QData, QFilter>, $($param,)*) -> Out> for Func
+        > MarkedEntitySystem<fn(Data<QData, QFilter>, $($param,)*) -> Out> for Func
         where
         for <'a> &'a mut Func:
                 FnMut(Data<QData, QFilter>, $($param),*) -> Out +
@@ -146,7 +148,7 @@ macro_rules! impl_entity_system_function {
             Out,
             Func: Send + Sync + 'static,
             $($param: SystemParam + 'static),*
-        > EntitySystemFunction<fn(In<Input>, Data<QData, QFilter>, $($param,)*) -> Out> for Func
+        > MarkedEntitySystem<fn(In<Input>, Data<QData, QFilter>, $($param,)*) -> Out> for Func
         where
         for <'a> &'a mut Func:
                 FnMut(In<Input>, Data<QData, QFilter>, $($param),*) -> Out +
@@ -185,6 +187,3 @@ macro_rules! impl_entity_system_function {
 }
 
 all_tuples!(impl_entity_system_function, 0, 16, F);
-
-
-

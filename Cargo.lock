@@ -48,9 +48,9 @@ checksum = "0c4b4d0bd25bd0b74681c0ad21497610ce1b7c91b1022cd21c80c6fbdd9476b0"
 
 [[package]]
 name = "bevy_ecs"
-version = "0.14.0"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c77fdc3a7230eff2fcebe4bd17c155bd238c660a0089d0f98c39ba0d461b923"
+checksum = "7a3eed7f144811946ebfa1c740da9e3bcd6dd2dd4da844eda085249d29bc9fef"
 dependencies = [
  "bevy_ecs_macros",
  "bevy_ptr",
@@ -67,9 +67,9 @@ dependencies = [
 
 [[package]]
 name = "bevy_ecs_macros"
-version = "0.14.0"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9272b511958525306cd141726d3ca59740f79fc0707c439b55a007bcc3497308"
+checksum = "d523630f2eb9fde6727e6c5ea48fa708079c5345da21ffeb1a4bd8ca761830da"
 dependencies = [
  "bevy_macro_utils",
  "proc-macro2",
@@ -79,17 +79,28 @@ dependencies = [
 
 [[package]]
 name = "bevy_entity_system"
-version = "0.14.0"
+version = "0.14.1"
 dependencies = [
  "bevy_ecs",
+ "bevy_entity_system_macros",
  "bevy_utils",
 ]
 
 [[package]]
+name = "bevy_entity_system_macros"
+version = "0.15.0-dev"
+dependencies = [
+ "bevy_macro_utils",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "bevy_macro_utils"
-version = "0.14.0"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3ad860d35d74b35d4d6ae7f656d163b6f475aa2e64fc293ee86ac901977ddb7"
+checksum = "7ec4a585ec2a6dedd4f4143c07219d120ae142121929f0d83e68d82a452cdc9b"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -99,15 +110,15 @@ dependencies = [
 
 [[package]]
 name = "bevy_ptr"
-version = "0.14.0"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c115c97a5c8a263bd0aa7001b999772c744ac5ba797d07c86f25734ce381ea69"
+checksum = "7ed72afbb6249a6803a3ed7bd2f68ff080d9392f550475e050b34c1e1c1e3e8f"
 
 [[package]]
 name = "bevy_reflect"
-version = "0.14.0"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "406ea0fce267169c2320c7302d97d09f605105686346762562c5f65960b5ca2f"
+checksum = "fb37e8fc3c61d04da480c95cc8c303aa7781afed6be01dae333b336af493c38e"
 dependencies = [
  "bevy_ptr",
  "bevy_reflect_derive",
@@ -121,9 +132,9 @@ dependencies = [
 
 [[package]]
 name = "bevy_reflect_derive"
-version = "0.14.0"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0427fdb4425fc72cc96d45e550df83ace6347f0503840de116c76a40843ba751"
+checksum = "8fc00d5086f5bf534b4c2dbeba549a6b8d3223515f3cb5ba4fdaabe953ec6cea"
 dependencies = [
  "bevy_macro_utils",
  "proc-macro2",
@@ -134,9 +145,9 @@ dependencies = [
 
 [[package]]
 name = "bevy_tasks"
-version = "0.14.0"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a8bfb8d484bdb1e9bec3789c75202adc5e608c4244347152e50fb31668a54f9"
+checksum = "84f5414c3f49c96e02ceccf5fa12fb6cfbf8b271d2a820902d6f622e9c2fa681"
 dependencies = [
  "async-executor",
  "futures-lite",
@@ -145,9 +156,9 @@ dependencies = [
 
 [[package]]
 name = "bevy_utils"
-version = "0.14.0"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7fab364910e8f5839578aba9cfda00a8388e9ebe352ceb8491a742ce6af9ec6e"
+checksum = "f6efbe5a621b56cc4ffa41074929eca84107e242302496b9bb7550675e6bf2e7"
 dependencies = [
  "ahash",
  "bevy_utils_proc_macros",
@@ -160,9 +171,9 @@ dependencies = [
 
 [[package]]
 name = "bevy_utils_proc_macros"
-version = "0.14.0"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad9db261ab33a046e1f54b35f885a44f21fcc80aa2bc9050319466b88fe58fe3"
+checksum = "36a1e91b4294cad2d08620ac062509395d4f65247b636946d6497eaeccf4dbfd"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -293,9 +304,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.2.6"
+version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "168fb715dda47215e360912c096649d23d58bf392ac62f73919e831745e40f26"
+checksum = "de3fc2e30ba82dd1b3911c8de1ffc143c74a914a14e99514d7637e3099df5ea0"
 dependencies = [
  "equivalent",
  "hashbrown",
@@ -382,18 +393,18 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.204"
+version = "1.0.205"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc76f558e0cbb2a839d37354c575f1dc3fdc6546b5be373ba43d95f231bf7c12"
+checksum = "e33aedb1a7135da52b7c21791455563facbbcc43d0f0f66165b42c21b3dfb150"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.204"
+version = "1.0.205"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0cd7e117be63d3c3678776753929474f3b04a43a080c744d6b0ae2a8c28e222"
+checksum = "692d6f5ac90220161d6774db30c662202721e64aed9058d2c394f451261420c1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -458,15 +469,15 @@ dependencies = [
 
 [[package]]
 name = "toml_datetime"
-version = "0.6.7"
+version = "0.6.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8fb9f64314842840f1d940ac544da178732128f1c78c21772e876579e0da1db"
+checksum = "0dd7358ecb8fc2f8d014bf86f6f638ce72ba252a2c3a2572f2a795f1d23efb41"
 
 [[package]]
 name = "toml_edit"
-version = "0.22.17"
+version = "0.22.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d9f8729f5aea9562aac1cc0441f5d6de3cff1ee0c5d67293eeca5eb36ee7c16"
+checksum = "583c44c02ad26b0c3f3066fe629275e50627026c51ac2e595cca4c230ce1ce1d"
 dependencies = [
  "indexmap",
  "toml_datetime",
@@ -613,9 +624,9 @@ dependencies = [
 
 [[package]]
 name = "winnow"
-version = "0.6.16"
+version = "0.6.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b480ae9340fc261e6be3e95a1ba86d54ae3f9171132a73ce8d4bbaf68339507c"
+checksum = "68a9bda4691f099d435ad181000724da8e5899daa10713c2d432552b9ccd3a6f"
 dependencies = [
  "memchr",
 ]

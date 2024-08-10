@@ -8,22 +8,22 @@ use bevy_ecs::{
 
 /// Filter that imitates `QueryData` being part of the query without read and write access.
 /// Only adds `With` and `Without` access of the `QueryData` to the access of the system.
-/// 
+///
 /// Useful in generic contexts.
-/// 
+///
 /// `Query<(&mut Transform, T)>` and
 /// `Query<&mut Transform, MatchesData<T>>`
-/// will iterate over the same entities except system with second query 
+/// will iterate over the same entities except system with second query
 /// can be run in parallel with other systems accessing `T`, and
 /// if `T` accesses `Transform` it won't create conflicts
-pub struct MatchesData<D: QueryData>(PhantomData<D>);
+pub struct DataMatch<D: QueryData>(PhantomData<D>);
 
 /// SAFETY:
 /// `update_component_access` does not add any accesses.
 /// This is sound because `fetch` does not access any components.
 /// `update_component_access` adds a `With` and `Without` filters of `D`.
 /// This is sound because `matches_component_set` returns result of call to `D`'s `matches_component_set`.
-unsafe impl<D: QueryData> WorldQuery for MatchesData<D> {
+unsafe impl<D: QueryData> WorldQuery for DataMatch<D> {
     type Item<'a> = ();
     type Fetch<'a> = ();
     type State = D::State;
@@ -90,7 +90,7 @@ unsafe impl<D: QueryData> WorldQuery for MatchesData<D> {
     }
 }
 
-impl<D: QueryData> QueryFilter for MatchesData<D> {
+impl<D: QueryData> QueryFilter for DataMatch<D> {
     const IS_ARCHETYPAL: bool = true;
 
     unsafe fn filter_fetch(
