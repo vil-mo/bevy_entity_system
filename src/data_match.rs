@@ -1,10 +1,11 @@
-use std::marker::PhantomData;
+//! Contains [`DataMatch`]
 
 use bevy_ecs::{
     component::{ComponentId, Components},
     query::{FilteredAccess, QueryData, QueryFilter, WorldQuery},
     world::World,
 };
+use std::marker::PhantomData;
 
 /// Filter that imitates `QueryData` being part of the query without read and write access.
 /// Only adds `With` and `Without` access of the `QueryData` to the access of the system.
@@ -15,7 +16,7 @@ use bevy_ecs::{
 /// `Query<&mut Transform, MatchesData<T>>`
 /// will iterate over the same entities except system with second query
 /// can be run in parallel with other systems accessing `T`, and
-/// if `T` accesses `Transform` it won't create conflicts
+/// if `T` accesses `Transform`, it won't create conflicts
 pub struct DataMatch<D: QueryData>(PhantomData<D>);
 
 /// SAFETY:

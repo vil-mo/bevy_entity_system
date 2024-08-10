@@ -10,6 +10,11 @@ fn bevy_ecs_path() -> syn::Path {
     bevy_macro_utils::BevyManifest::default().get_path("bevy_ecs")
 }
 
+/// Can be derived for `EntitySystem`s to have more convenient workflow with bevy ecosystem.
+/// 
+/// Using this implementation will output the system that iterates over all the entities
+/// that match the `Query<Self::Data, Self::Filter>` every time the system is run.
+/// Input to the system will be cloned for every run of entity system
 #[proc_macro_derive(IntoSystem)]
 pub fn derive_into_system_for_entity_system(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
@@ -52,7 +57,7 @@ pub fn derive_into_system_for_entity_system(input: TokenStream) -> TokenStream {
                 type System = #ecs_path::system::FunctionSystem<
                     #entity_system_path::into_system::IsEntitySystem,
                     #entity_system_path::into_system::EntitySystemSystemParamFunction<
-                        <#name #ty_generics as IntoEntitySystem<In, (), __M>>::EntitySystem
+                        <#name #ty_generics as #entity_system_path::into_entity_system::IntoEntitySystem<In, (), __M>>::EntitySystem
                     >,
                 >;
 

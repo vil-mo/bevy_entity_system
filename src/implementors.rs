@@ -1,9 +1,12 @@
+//! Built in implementations of [`EntitySystem`]
+
 use crate::{data_match::DataMatch, EntitySystem};
 use bevy_ecs::{
     entity::Entity,
     query::QueryItem,
     system::{lifetimeless::SQuery, ParamSet, SystemParamItem},
 };
+use bevy_entity_system_macros::IntoSystem;
 
 type SParamSet<P> = ParamSet<'static, 'static, P>;
 
@@ -25,6 +28,9 @@ type ESPipeParam<A, B> = SParamSet<(
 )>;
 
 /// [`EntitySystem`] that pipes output of the first [`EntitySystem`] to the second [`EntitySystem`]
+/// and returns result of second entity system.
+/// This can be run for the entity if and only if both systems can be run for this entity.
+#[derive(IntoSystem)]
 pub struct PipeEntitySystem<A: EntitySystem, B: EntitySystem<In = A::Out>>(A, B);
 
 impl<A: EntitySystem, B: EntitySystem<In = A::Out>> EntitySystem for PipeEntitySystem<A, B> {
@@ -53,7 +59,7 @@ impl<A: EntitySystem, B: EntitySystem<In = A::Out>> EntitySystem for PipeEntityS
     }
 }
 
-/// Pipes output of the first system into second system. See [`EntitySystemPipe`]
+/// See [`PipeEntitySystem`]
 #[inline]
 pub fn entity_system_pipe<A: EntitySystem, B: EntitySystem<In = A::Out>>(
     a: A,
@@ -62,6 +68,11 @@ pub fn entity_system_pipe<A: EntitySystem, B: EntitySystem<In = A::Out>>(
     PipeEntitySystem(a, b)
 }
 
+/// Wrapper over [`EntitySystem`] that can be run for any entity in the world.
+/// If inner system can be run, returns `Ok` and result of the run.
+/// Otherwise returns `Err` with the supposed input for this system.
+/// Useful for [`piping`](PipeEntitySystem) systems
+#[derive(IntoSystem)]
 pub struct OptionalEntitySystem<T: EntitySystem>(T);
 
 impl<T: EntitySystem> EntitySystem for OptionalEntitySystem<T> {
@@ -91,16 +102,20 @@ impl<T: EntitySystem> EntitySystem for OptionalEntitySystem<T> {
     }
 }
 
+/// See [`OptionalEntitySystem`]
 #[inline]
 pub fn optional<T: EntitySystem>(system: T) -> OptionalEntitySystem<T> {
     OptionalEntitySystem(system)
 }
 
+/// Customize behavior of [`AdapterEntitySystem`]
 pub trait Adapt<S: EntitySystem>: Send + Sync + 'static {
+    /// The input type for an [`AdapterEntitySystem`]
     type In;
+    /// The output type for an [`AdapterEntitySystem`]
     type Out;
 
-    // Required method
+    /// When used in an [`AdapterEntitySystem`], this function customizes how the system is run and how its inputs/outputs are adapted.
     fn adapt(
         &mut self,
         input: Self::In,
@@ -122,6 +137,8 @@ where
     }
 }
 
+/// An [`EntitySystem`] that takes the output of `T` and transforms it by applying `Func` to it.
+#[derive(IntoSystem)]
 pub struct AdapterEntitySystem<T: EntitySystem, Func: Adapt<T>> {
     system: T,
     func: Func,
@@ -148,6 +165,7 @@ impl<T: EntitySystem, Func: Adapt<T>> EntitySystem for AdapterEntitySystem<T, Fu
     }
 }
 
+/// See [`AdapterEntitySystem`]
 #[inline]
 pub fn adapt<T: EntitySystem, A: Adapt<T>>(system: T, func: A) -> AdapterEntitySystem<T, A> {
     AdapterEntitySystem { system, func }

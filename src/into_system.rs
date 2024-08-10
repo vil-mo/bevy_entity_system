@@ -1,8 +1,16 @@
-use bevy_ecs::system::{lifetimeless::SQuery, ParamSet, SystemParamFunction, SystemParamItem};
+//! Implementation of [`IntoSystem`]
 
 use crate::EntitySystem;
+use bevy_ecs::system::{lifetimeless::SQuery, ParamSet, SystemParamFunction, SystemParamItem};
 
+pub use bevy_entity_system_macros::IntoSystem;
+
+/// Marker for [`IntoSystem`] implementation
 pub struct IsEntitySystem;
+
+/// [`SystemParamFunction`], every time it's run, it iterates over all the
+/// entities in the world that `T` can run on
+/// and runs `T` for them. Input will be cloned for every run of `T`.
 pub struct EntitySystemSystemParamFunction<T: EntitySystem<In: Clone, Out = ()>>(pub T);
 
 impl<T: EntitySystem<In: Clone, Out = ()>> SystemParamFunction<IsEntitySystem>

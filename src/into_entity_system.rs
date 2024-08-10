@@ -1,23 +1,48 @@
-use bevy_ecs::system::{IntoSystem, ParamSet, Query, System};
+//! Convenience in working with [`EntitySystem`]s
 
 use crate::{
     implementors::{adapt, entity_system_pipe, optional},
     marked_entity_system::{MarkedEntitySystem, MarkedEntitySystemRunner},
+    prelude::{AdapterEntitySystem, OptionalEntitySystem, PipeEntitySystem},
     EntitySystem,
 };
+use bevy_ecs::system::{IntoSystem, ParamSet, Query, System};
 
+/// Glue trait for convenience of working with [`EntitySystem`]s.
+/// Everything that implements this trait can be converted to [`EntitySystem`].
 pub trait IntoEntitySystem<In, Out, Marker>: Sized {
+    /// Resulting [`EntitySystem`]
     type EntitySystem: EntitySystem<In = In, Out = Out>;
 
+    /// Converts `Self` to [`EntitySystem`]
     fn into_entity_system(self) -> Self::EntitySystem;
 
-    fn into_system_with_output<T: Default>(
+    /// Converts `Self` to [`System`] that collects output of every entity system that is being run and returns result as an output.
+    /// This implementation will iterate over all the entities in the world
+    /// that can be run on by `Self::EntitySystem` every time the system is run
+    /// and runs `EntitySystem` for them. Input will be cloned for every run of `EntitySystem`.
+    /// `func` will be run for each run of `EntitySystem` passing in an output of that system and modifying output value each step.
+    /// Initial value for output is it's [`Default`] value.
+    ///
+    /// ```
+    /// # use bevy_ecs::prelude::*;
+    /// # use bevy_entity_system::prelude::*;
+    /// #[derive(Component)]
+    /// struct Count(i32);
+    ///
+    /// fn get_count(data: Data<&Count>) -> i32 {
+    ///     data.0
+    /// }
+    ///
+    /// // When system being run, it will output sum of all values of entities with `Count` component in the world
+    /// get_count.into_system_with_output(|sum: &mut i32, count| *sum += count)
+    /// ```
+    fn into_system_with_output<T: Default + 'static>(
         self,
         mut func: impl FnMut(&mut T, Out) + Send + Sync + 'static,
     ) -> impl System<In = In, Out = T>
     where
         In: Clone + 'static,
-        T: 'static,
     {
         let mut entity_system = self.into_entity_system();
 
@@ -45,24 +70,27 @@ pub trait IntoEntitySystem<In, Out, Marker>: Sized {
         )
     }
 
+    /// See [`PipeEntitySystem`]
     #[inline]
-    fn pipe<BMarker, BOut>(
+    fn pipe<BMarker, BOut, B: IntoEntitySystem<Out, BOut, BMarker>>(
         self,
-        other: impl IntoEntitySystem<Out, BOut, BMarker>,
-    ) -> impl EntitySystem<In = In, Out = BOut> {
+        other: B,
+    ) -> PipeEntitySystem<Self::EntitySystem, B::EntitySystem> {
         entity_system_pipe(self.into_entity_system(), other.into_entity_system())
     }
 
+    /// Maps output of the system to the new value.
     #[inline]
     fn map<F: Send + Sync + 'static + FnMut(Out) -> U, U>(
         self,
         func: F,
-    ) -> impl EntitySystem<In = In, Out = U> {
+    ) -> AdapterEntitySystem<Self::EntitySystem, F> {
         adapt(self.into_entity_system(), func)
     }
 
+    /// See [`OptionalEntitySystem`]
     #[inline]
-    fn optional(self) -> impl EntitySystem<In = In, Out = Result<Out, In>> {
+    fn optional(self) -> OptionalEntitySystem<Self::EntitySystem> {
         optional(self.into_entity_system())
     }
 }
@@ -88,9 +116,15 @@ impl<Marker: 'static, T: MarkedEntitySystem<Marker>>
     }
 }
 
+/// Trait exists because `=` in where clauses isn't allowed
 pub trait EntitySystemIntoSystem<In: Clone + 'static, Marker>:
     IntoEntitySystem<In, (), Marker>
 {
+    /// Turns `EntitySystem` into system
+    ///
+    /// Using this implementation will output the system that iterates over all the entities in the world
+    /// that can be run on by `<Self as IntoEntitySystem>::EntitySystem` every time the system is run.
+    /// Input to the system will be cloned for every run of entity system
     fn into_system(self) -> impl System<In = In, Out = ()>;
 }
 

@@ -1,4 +1,7 @@
-use crate::{prelude::IntoEntitySystem, EntitySystem};
+//! Contains functionality to run [`EntitySystem`]s that should be marked in order to implement this trait
+//! This is necessary to avoid conflicting implementations when implementing trait for rust functions
+
+use crate::EntitySystem;
 use bevy_ecs::{
     query::{QueryData, QueryFilter, QueryItem},
     system::{In, SystemParam, SystemParamItem},
@@ -10,6 +13,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+/// Runs [`MarkedEntitySystem`]
 #[derive(IntoSystem)]
 pub struct MarkedEntitySystemRunner<Marker: 'static, T: MarkedEntitySystem<Marker>>(
     T,
@@ -17,6 +21,7 @@ pub struct MarkedEntitySystemRunner<Marker: 'static, T: MarkedEntitySystem<Marke
 );
 
 impl<Marker: 'static, T: MarkedEntitySystem<Marker>> MarkedEntitySystemRunner<Marker, T> {
+    /// Constructor
     #[inline]
     pub fn new(function: T) -> Self {
         MarkedEntitySystemRunner(function, PhantomData)
@@ -43,15 +48,28 @@ impl<Marker: 'static, T: MarkedEntitySystem<Marker>> EntitySystem
     }
 }
 
+/// Trait implemented for all rust functions that can be treated as [`EntitySystem`]s.
+/// [`MarkedEntitySystemRunner`] is used to run such entity systems
+/// Those are function that look like this:
+/// ```
+/// fn without_input(data: Data<QueryData, QueryFilter = ()>, ...: SystemParam) -> Out { ... }
+/// fn with_input(input: In<InputType>, data: Data<QueryData, QueryFilter = ()>, ...: SystemParam) -> Out { ... }
+/// ```
 pub trait MarkedEntitySystem<Marker>: Send + Sync + 'static {
+    /// First generic argument of the [`Data`] param of the function.
+    /// Converted to [`EntitySystem::Data`]
     type Data: QueryData + 'static;
+    /// Second generic argument of the [`Data`] param of the function
     type Filter: QueryFilter + 'static;
+    /// [`SystemParam`]s of the function
     type Param: SystemParam + 'static;
 
+    /// Input of the function. See [`In`]
     type In;
+    /// Output of the function
     type Out;
 
-    /// Executes this system once. See [`System::run`] or [`System::run_unsafe`].
+    /// Executes this system once.
     fn run(
         &mut self,
         input: Self::In,
@@ -60,7 +78,9 @@ pub trait MarkedEntitySystem<Marker>: Send + Sync + 'static {
     ) -> Self::Out;
 }
 
+/// First (or second after [`In`]) parameter of any function that can be treated as [`EntitySystem`].
 pub struct Data<'w, D: QueryData, F: QueryFilter = ()> {
+    /// Item of the `QueryData`. What you get by calling `Query::get` or similar methods
     pub item: D::Item<'w>,
     marker: PhantomData<F>,
 }
@@ -82,6 +102,7 @@ impl<'w, D: QueryData, F: QueryFilter> DerefMut for Data<'w, D, F> {
 }
 
 impl<'w, D: QueryData, F: QueryFilter> Data<'w, D, F> {
+    /// New instance of `Data` with provided item
     pub fn new(item: D::Item<'w>) -> Self {
         Data {
             item,
@@ -89,6 +110,7 @@ impl<'w, D: QueryData, F: QueryFilter> Data<'w, D, F> {
         }
     }
 
+    /// Converts `Data` into inner item. Basically the same as `let _ = data.item`
     #[inline]
     pub fn into_inner(self) -> D::Item<'w> {
         self.item

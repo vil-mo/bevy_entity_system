@@ -6,7 +6,7 @@ description = "Adds systems that only operate on single entity"
 repository = "https://github.com/vil-mo/bevy_entity_system"
 license = "MIT OR Apache-2.0"
 keywords = ["ecs", "game", "bevy"]
-categories = ["game-engines", "data-structures"]
+categories = ["abstactions"]
 
 [dependencies]
 bevy_utils = { version = "0.14" }
