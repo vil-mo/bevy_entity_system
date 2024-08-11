@@ -1,1 +1,0 @@
-/home/vilmo/Documents/bevy/bevy_entity_system/macros/target/package/bevy_entity_system_macros-0.14.1/target/debug/libbevy_entity_system_macros.so: /home/vilmo/Documents/bevy/bevy_entity_system/macros/target/package/bevy_entity_system_macros-0.14.1/src/lib.rs
