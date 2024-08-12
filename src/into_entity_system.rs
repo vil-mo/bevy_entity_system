@@ -4,9 +4,9 @@ use crate::{
     implementors::{adapt, entity_system_pipe, optional},
     marked_entity_system::{MarkedEntitySystem, MarkedEntitySystemRunner},
     prelude::{AdapterEntitySystem, OptionalEntitySystem, PipeEntitySystem},
-    EntitySystem,
+    EntitySystem, ReadOnlyEntitySystem,
 };
-use bevy_ecs::system::{IntoSystem, ParamSet, Query, System};
+use bevy_ecs::system::{IntoSystem, ParamSet, Query, ReadOnlySystem, System};
 
 /// Glue trait for convenience of working with [`EntitySystem`]s.
 /// Everything that implements this trait can be converted to [`EntitySystem`].
@@ -17,7 +17,7 @@ pub trait IntoEntitySystem<In, Out, Marker>: Sized {
     /// Converts `Self` to [`EntitySystem`]
     fn into_entity_system(self) -> Self::EntitySystem;
 
-    /// Converts `Self` to [`System`] that collects output of every entity system that is being run and returns result as an output.
+    /// Converts [`EntitySystem`] to [`System`] that collects output of every entity system that is being run and returns result as an output.
     /// This implementation will iterate over all the entities in the world
     /// that can be run on by `Self::EntitySystem` every time the system is run
     /// and runs `EntitySystem` for them. Input will be cloned for every run of `EntitySystem`.
@@ -35,7 +35,9 @@ pub trait IntoEntitySystem<In, Out, Marker>: Sized {
     /// }
     ///
     /// // When system being run, it will output sum of all values of entities with `Count` component in the world
-    /// get_count.into_system_with_output(|sum: &mut i32, count| *sum += count)
+    /// let system = get_count.into_system_with_output(|sum: &mut i32, count| *sum += count);
+    /// 
+    /// # bevy_ecs::system::assert_is_system(system);
     /// ```
     fn into_system_with_output<T: Default + 'static>(
         self,
@@ -69,6 +71,47 @@ pub trait IntoEntitySystem<In, Out, Marker>: Sized {
             },
         )
     }
+
+    /// Converts [`ReadOnlyEntitySystem`] to [`ReadOnlySystem`] that collects output of every entity system that is being run and returns result as an output.
+    /// This implementation will iterate over all the entities in the world
+    /// that can be run on by `Self::EntitySystem` every time the system is run
+    /// and runs `EntitySystem` for them. Input will be cloned for every run of `EntitySystem`.
+    /// `func` will be run for each run of `EntitySystem` passing in an output of that system and modifying output value each step.
+    /// Initial value for output is it's [`Default`] value.
+    fn into_read_only_system_with_output<T: Default + 'static>(
+        self,
+        mut func: impl FnMut(&mut T, Out) + Send + Sync + 'static,
+    ) -> impl ReadOnlySystem<In = In, Out = T>
+    where
+        In: Clone + 'static,
+        Self::EntitySystem: ReadOnlyEntitySystem,
+    {
+        let mut entity_system = self.into_entity_system();
+
+        IntoSystem::into_system(
+            move |input: bevy_ecs::system::In<In>,
+                  mut query: Query<
+                <Self::EntitySystem as EntitySystem>::Data,
+                <Self::EntitySystem as EntitySystem>::Filter,
+            >,
+                  mut param: ParamSet<(<Self::EntitySystem as EntitySystem>::Param,)>| {
+                let mut output = T::default();
+
+                for data in query.iter_mut() {
+                    let result = Self::EntitySystem::run(
+                        &mut entity_system,
+                        input.clone(),
+                        data,
+                        param.p0(),
+                    );
+                    func(&mut output, result);
+                }
+
+                output
+            },
+        )
+    }
+
 
     /// See [`PipeEntitySystem`]
     #[inline]
@@ -120,12 +163,20 @@ impl<Marker: 'static, T: MarkedEntitySystem<Marker>>
 pub trait EntitySystemIntoSystem<In: Clone + 'static, Marker>:
     IntoEntitySystem<In, (), Marker>
 {
-    /// Turns `EntitySystem` into system
+    /// Turns [`EntitySystem`] into [`System`]
     ///
     /// Using this implementation will output the system that iterates over all the entities in the world
     /// that can be run on by `<Self as IntoEntitySystem>::EntitySystem` every time the system is run.
     /// Input to the system will be cloned for every run of entity system
     fn into_system(self) -> impl System<In = In, Out = ()>;
+
+    /// Turns [`ReadOnlyEntitySystem`] into [`ReadOnlySystem`]
+    ///
+    /// Using this implementation will output the system that iterates over all the entities in the world
+    /// that can be run on by `<Self as IntoEntitySystem>::EntitySystem` every time the system is run.
+    /// Input to the system will be cloned for every run of entity system
+    fn into_read_only_system(self) -> impl ReadOnlySystem<In = In, Out = ()>
+        where Self::EntitySystem: ReadOnlyEntitySystem;
 }
 
 impl<In: Clone + 'static, Marker, T: IntoEntitySystem<In, (), Marker>>
@@ -147,4 +198,23 @@ impl<In: Clone + 'static, Marker, T: IntoEntitySystem<In, (), Marker>>
             },
         )
     }
+
+    fn into_read_only_system(self) -> impl ReadOnlySystem<In = In, Out = ()>
+        where Self::EntitySystem: ReadOnlyEntitySystem {
+        let mut entity_system = self.into_entity_system();
+
+        IntoSystem::into_system(
+            move |input: bevy_ecs::system::In<In>,
+                  mut query: Query<
+                <T::EntitySystem as EntitySystem>::Data,
+                <T::EntitySystem as EntitySystem>::Filter,
+            >,
+                  mut param: ParamSet<(<T::EntitySystem as EntitySystem>::Param,)>| {
+                for data in query.iter_mut() {
+                    T::EntitySystem::run(&mut entity_system, input.clone(), data, param.p0());
+                }
+            },
+        )
+    }
+
 }

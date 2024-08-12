@@ -1,33 +1,36 @@
 #![warn(clippy::undocumented_unsafe_blocks, missing_docs)]
 //! This crate provides easy to use way to make systems that operate on a single entity.
 //!
-//! ```rust
+//! ```
+//! # use bevy_ecs::prelude::*;
+//! # use bevy_entity_system::prelude::*;
+//! #[derive(Component)]
+//! struct Count(i32);
+//! 
 //! #[derive(Component)]
 //! struct MyMarkerComponent;
 //!
 //! fn my_entity_system(
-//!     data: Data<&mut Transform, With<MyMarkerComponent>>,
+//!     mut data: Data<&mut Count, With<MyMarkerComponent>>,
 //!     mut commands: Commands
 //! ) {
-//!     *data.item += 10;
-//!     commands.spawn(Transform::from_translation(data.item.translation));
+//!     data.item.0 += 1;
+//!     commands.spawn(Count(10));
 //! }
 //!
-//! fn my_entity_system_with_input(input: In<Vec2>, data: Data<&mut Transform>) {
-//!     *data.item += input;
+//! fn my_entity_system_with_input(input: In<i32>, mut data: Data<&mut Count>) {
+//!     data.item.0 += *input;
 //! }
 //!
-//! app.add_systems(Update, (
-//!     my_entity_system.into_system(),
-//!     my_entity_system_with_input.into_system()
-//! ));
+//! bevy_ecs::system::assert_is_system(my_entity_system.into_system());
+//! bevy_ecs::system::assert_is_system(my_entity_system_with_input.into_system());
 //! ```
 
 extern crate self as bevy_entity_system;
 
 use bevy_ecs::{
-    query::{QueryData, QueryFilter, QueryItem},
-    system::{SystemParam, SystemParamItem},
+    query::{QueryData, QueryFilter, QueryItem, ReadOnlyQueryData},
+    system::{ReadOnlySystemParam, SystemParam, SystemParamItem},
 };
 
 pub mod data_match;
@@ -43,22 +46,28 @@ pub mod marked_entity_system;
 /// Every entity system that is function that has [`Data`](crate::marked_entity_system::Data)
 /// as a first (or second after [`In`](bevy_ecs::system::In)) parameter
 /// ```
-/// # use crate::prelude::*;
+/// # use bevy_entity_system::prelude::*;
 /// # use bevy_ecs::prelude::*;
+/// #[derive(Component)]
+/// struct Count(i32);
+/// 
 /// #[derive(Component)]
 /// struct MyMarkerComponent;
 ///
 /// fn my_entity_system(
-///     data: Data<&mut Transform, With<MyMarkerComponent>>,
+///     mut data: Data<&mut Count, With<MyMarkerComponent>>,
 ///     mut commands: Commands
 /// ) {
-///     *data.item += 10;
-///     commands.spawn(Transform::from_translation(data.item.translation));
+///     data.item.0 += 1;
+///     commands.spawn(Count(10));
 /// }
 ///
-/// fn my_entity_system_with_input(input: In<Vec2>, data: Data<&mut Transform>) {
-///     *data.item += input;
+/// fn my_entity_system_with_input(input: In<i32>, mut data: Data<&mut Count>) {
+///     data.item.0 += *input;
 /// }
+/// 
+/// # bevy_ecs::system::assert_is_system(my_entity_system.into_system());
+/// # bevy_ecs::system::assert_is_system(my_entity_system_with_input.into_system());
 /// ```
 ///
 /// # Custom implementation
@@ -91,13 +100,21 @@ pub trait EntitySystem: Send + Sync + 'static {
     ) -> Self::Out;
 }
 
+/// Implemented for [`EntitySystem`]s that only read data from the world
+pub trait ReadOnlyEntitySystem:
+    EntitySystem<Data: ReadOnlyQueryData, Param: ReadOnlySystemParam>
+{
+}
+
+impl<T: EntitySystem<Data: ReadOnlyQueryData, Param: ReadOnlySystemParam>> ReadOnlyEntitySystem for T {}
+
 /// Prelude module
 pub mod prelude {
     pub use crate::{
         implementors::{AdapterEntitySystem, OptionalEntitySystem, PipeEntitySystem},
         into_entity_system::{EntitySystemIntoSystem, IntoEntitySystem},
         marked_entity_system::Data,
-        EntitySystem,
+        EntitySystem, ReadOnlyEntitySystem,
     };
     pub use bevy_entity_system_macros as macros;
 }

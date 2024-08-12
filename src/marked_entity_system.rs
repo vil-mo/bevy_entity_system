@@ -4,7 +4,7 @@
 use crate::EntitySystem;
 use bevy_ecs::{
     query::{QueryData, QueryFilter, QueryItem},
-    system::{In, SystemParam, SystemParamItem},
+    system::{In, SystemParam, SystemParamFunction, SystemParamItem},
 };
 use bevy_entity_system_macros::IntoSystem;
 use bevy_utils::all_tuples;
@@ -48,21 +48,20 @@ impl<Marker: 'static, T: MarkedEntitySystem<Marker>> EntitySystem
     }
 }
 
-/// Trait implemented for all rust functions that can be treated as [`EntitySystem`]s.
+/// Trait implemented for all types that are defined by implementing a certain
+/// trait defined in other crate and can be treated as [`EntitySystem`]s.
+/// For example rust closures ([`FnMut`]) and [`SystemParamFunction`]. 
+/// This is needed to avoid conflicting implementations.
+/// 
 /// [`MarkedEntitySystemRunner`] is used to run such entity systems
-/// Those are function that look like this:
-/// ```
-/// fn without_input(data: Data<QueryData, QueryFilter = ()>, ...: SystemParam) -> Out { ... }
-/// fn with_input(input: In<InputType>, data: Data<QueryData, QueryFilter = ()>, ...: SystemParam) -> Out { ... }
-/// ```
 pub trait MarkedEntitySystem<Marker>: Send + Sync + 'static {
     /// First generic argument of the [`Data`] param of the function.
     /// Converted to [`EntitySystem::Data`]
-    type Data: QueryData + 'static;
+    type Data: QueryData;
     /// Second generic argument of the [`Data`] param of the function
-    type Filter: QueryFilter + 'static;
+    type Filter: QueryFilter;
     /// [`SystemParam`]s of the function
-    type Param: SystemParam + 'static;
+    type Param: SystemParam;
 
     /// Input of the function. See [`In`]
     type In;
@@ -76,6 +75,27 @@ pub trait MarkedEntitySystem<Marker>: Send + Sync + 'static {
         data_value: QueryItem<Self::Data>,
         param_value: SystemParamItem<Self::Param>,
     ) -> Self::Out;
+}
+
+/// Marker of [`MarkedEntitySystem`] implementation for [`SystemParamFunction`]
+pub struct IsSystemParamFunction;
+
+impl<T: SystemParamFunction<M>, M> MarkedEntitySystem<(IsSystemParamFunction, M)> for T {
+    type Data = ();
+    type Filter = ();
+    type Param = T::Param;
+
+    type In = T::In;
+    type Out = T::Out;
+
+    fn run(
+            &mut self,
+            input: Self::In,
+            _data_value: QueryItem<Self::Data>,
+            param_value: SystemParamItem<Self::Param>,
+        ) -> Self::Out {
+        T::run(self, input, param_value)
+    }
 }
 
 /// First (or second after [`In`]) parameter of any function that can be treated as [`EntitySystem`].

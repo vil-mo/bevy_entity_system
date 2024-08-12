@@ -1,6 +1,6 @@
 [package]
 name = "bevy_entity_system"
-version = "0.14.1"
+version = "0.14.2"
 edition = "2021"
 description = "Adds systems that only operate on single entity"
 repository = "https://github.com/vil-mo/bevy_entity_system"
@@ -12,3 +12,4 @@ categories = ["game-development", "data-structures"]
 bevy_utils = { version = "0.14", default-features = false }
 bevy_ecs = { version = "0.14", default-features = false }
 bevy_entity_system_macros = { version = "0.14.1", path = "macros" }
+
