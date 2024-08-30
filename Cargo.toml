@@ -1,6 +1,6 @@
 [package]
 name = "bevy_entity_system"
-version = "0.14.2"
+version = "0.14.3"
 edition = "2021"
 description = "Adds systems that only operate on single entity"
 repository = "https://github.com/vil-mo/bevy_entity_system"

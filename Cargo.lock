@@ -78,7 +78,7 @@ dependencies = [
 
 [[package]]
 name = "bevy_entity_system"
-version = "0.14.2"
+version = "0.14.3"
 dependencies = [
  "bevy_ecs",
  "bevy_entity_system_macros",
