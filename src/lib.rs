@@ -1,6 +1,20 @@
 #![warn(clippy::undocumented_unsafe_blocks, missing_docs)]
 //! This crate provides easy to use way to make systems that operate on a single entity.
 //!
+//! # Warning
+//! Currently there is a bug, individual entity systems don't store their state.
+//! State is being shared across all entities that are being iterated by the system that resulted from `into_system` call.
+//! That means that `Local`, `EntityReader` and other `SystemParam`'s, that
+//! rely on it's state property to be preserved between system runs, won't work correctly.
+//! It is a huge footgun, so the work on fixing it is being done.
+//!
+//! After fix, the API will change, user would need to explicitly specify the entities this system is allowed to run on.
+//! That means, you most probably would need to be able to mutate systems at 
+//! runtime - something that bevy currently doesn't support. 
+//! I also work on a crate that will be able to provide you with such functionality - it is not published yet.
+//!
+//! # Example
+//!  
 //! ```
 //! # use bevy_ecs::prelude::*;
 //! # use bevy_entity_system::prelude::*;
@@ -70,6 +84,18 @@ pub mod marked_entity_system;
 /// # bevy_ecs::system::assert_is_system(my_entity_system_with_input.into_system());
 /// ```
 ///
+/// # Warning
+/// Currently there is a bug, individual entity systems don't store their state.
+/// State is being shared across all entities that are being iterated by the system that resulted from `into_system` call.
+/// That means that `Local`, `EntityReader` and other `SystemParam`'s, that
+/// rely on it's state property to be preserved between system runs, won't work correctly.
+/// It is a huge footgun, so the work on fixing it is being done.
+///
+/// After fix, the API will change, user would need to explicitly specify the entities this system is allowed to run on.
+/// That means, you most probably would need to be able to mutate systems at 
+/// runtime - something that bevy currently doesn't support. 
+/// I also work on a crate that will be able to provide you with such functionality - it is not published yet.
+/// 
 /// # Custom implementation
 /// If you have a custom implementation of the trait, it's highly recommended to also
 /// derive [`IntoSystem`](crate::prelude::macros::IntoSystem) trait
